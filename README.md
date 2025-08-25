@@ -28,7 +28,7 @@ An AI-powered personal assistant built with **LiveKit** that can perform everyda
 
 ## 📸 Example
 
-For example, show:  
+For example,
 - Asking: “What’s the weather in Boca Raton?”  
 - Assistant responding with a spoken answer.  
 
