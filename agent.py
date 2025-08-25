@@ -7,7 +7,7 @@ from livekit.plugins import (
 )
 from livekit.plugins import google
 from prompts import AGENT_INSTRUCTION, SESSION_INSTRUCTION
-from tools import get_weather, search_web, send_email
+from tools import get_weather, search_web, send_email, get_crypto_price, translate_text
 load_dotenv()
 
 
@@ -22,7 +22,9 @@ class Assistant(Agent):
             tools=[
                 get_weather,
                 search_web,
-                send_email
+                send_email,
+                get_crypto_price,
+                translate_text,
             ],
 
         )

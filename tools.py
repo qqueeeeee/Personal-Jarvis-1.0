@@ -7,17 +7,17 @@ import smtplib
 from email.mime.multipart import MIMEMultipart  
 from email.mime.text import MIMEText
 from typing import Optional
+from googletrans import Translator
+import yfinance as yf
+from livekit.agents.llm import ChatMessage, ChatRole, ChatContent
+
 
 @function_tool()
 async def get_weather(
-    context: RunContext,  # type: ignore
+    context: RunContext,  
     city: str) -> str:
-    """
-    Get the current weather for a given city.
-    """
     try:
-        response = requests.get(
-            f"https://wttr.in/{city}?format=3")
+        response = requests.get(f"https://wttr.in/{city}?format=3")
         if response.status_code == 200:
             logging.info(f"Weather for {city}: {response.text.strip()}")
             return response.text.strip()   
@@ -30,11 +30,8 @@ async def get_weather(
 
 @function_tool()
 async def search_web(
-    context: RunContext,  # type: ignore
+    context: RunContext,  
     query: str) -> str:
-    """
-    Search the web using DuckDuckGo.
-    """
     try:
         results = DuckDuckGoSearchRun().run(tool_input=query)
         logging.info(f"Search results for '{query}': {results}")
@@ -45,55 +42,38 @@ async def search_web(
 
 @function_tool()    
 async def send_email(
-    context: RunContext,  # type: ignore
+    context: RunContext,  
     to_email: str,
     subject: str,
     message: str,
     cc_email: Optional[str] = None
 ) -> str:
-    """
-    Send an email through Gmail.
-    
-    Args:
-        to_email: Recipient email address
-        subject: Email subject line
-        message: Email body content
-        cc_email: Optional CC email address
-    """
     try:
-        # Gmail SMTP configuration
         smtp_server = "smtp.gmail.com"
         smtp_port = 587
-        
-        # Get credentials from environment variables
         gmail_user = os.getenv("GMAIL_USER")
-        gmail_password = os.getenv("GMAIL_APP_PASSWORD")  # Use App Password, not regular password
+        gmail_password = os.getenv("GMAIL_APP_PASSWORD")  
         
         if not gmail_user or not gmail_password:
             logging.error("Gmail credentials not found in environment variables")
             return "Email sending failed: Gmail credentials not configured."
         
-        # Create message
         msg = MIMEMultipart()
         msg['From'] = gmail_user
         msg['To'] = to_email
         msg['Subject'] = subject
         
-        # Add CC if provided
         recipients = [to_email]
         if cc_email:
             msg['Cc'] = cc_email
             recipients.append(cc_email)
         
-        # Attach message body
         msg.attach(MIMEText(message, 'plain'))
         
-        # Connect to Gmail SMTP server
         server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()  # Enable TLS encryption
+        server.starttls()  
         server.login(gmail_user, gmail_password)
         
-        # Send email
         text = msg.as_string()
         server.sendmail(gmail_user, recipients, text)
         server.quit()
@@ -110,3 +90,37 @@ async def send_email(
     except Exception as e:
         logging.error(f"Error sending email: {e}")
         return f"An error occurred while sending email: {str(e)}"
+
+
+@function_tool()
+async def translate_text(
+    context: RunContext,  
+    text: str,
+    target_language: str) -> str:
+    try:
+        translator = Translator()
+        translated = await translator.translate(text, dest=target_language)
+        logging.info(f"Translated '{text}' to {target_language}: {translated.text}")
+        return translated.text
+    except Exception as e:
+        logging.error(f"Error translating text: {e}")
+        return f"An error occurred while translating text: {str(e)}"
+
+@function_tool()
+async def get_crypto_price(
+    context: RunContext, 
+    symbol: str) -> str:
+    try:
+        crypto = yf.Ticker(symbol + "-USD")
+        data = crypto.history(period="1d")
+        if not data.empty:
+            price = round(data['Close'].iloc[-1], 2)
+            logging.info(f"Crypto price for {symbol}: ${price}")
+            return f"The current price of {symbol} is ${price}"
+        else:
+            logging.error(f"No data found for {symbol}")
+            return f"No data found for {symbol}"
+    except Exception as e:
+        logging.error(f"Error fetching crypto price for {symbol}: {e}")
+        return f"An error occurred while fetching crypto price: {str(e)}"
+
